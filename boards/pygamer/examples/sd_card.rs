@@ -21,8 +21,10 @@ use hal::pac::{CorePeripherals, Peripherals};
 use hal::prelude::*;
 use hal::time::MegaHertz;
 
-use embedded_graphics::pixelcolor::Rgb565;
+use embedded_graphics::fonts::{Font6x8, Text};
+use embedded_graphics::pixelcolor::{Rgb565, RgbColor};
 use embedded_graphics::prelude::*;
+use embedded_graphics::style::TextStyle;
 use embedded_graphics::{egrectangle, primitive_style};
 use embedded_graphics::{image::Image, image::ImageRaw, image::ImageRawLE};
 
@@ -40,8 +42,6 @@ fn main() -> ! {
     let mut delay = Delay::new(core.SYST, &mut clocks);
 
     let mut pins = hal::Pins::new(peripherals.PORT).split();
-
-    let mut red_led = pins.led_pin.into_open_drain_output(&mut pins.port);
 
     let sdmmc_cs: OldOutputPin<_> = pins.sd_cs_pin.into_push_pull_output(&mut pins.port).into();
     let sdmmc_spi = pins.spi.init(
@@ -71,12 +71,37 @@ fn main() -> ! {
         bottom_right = (160, 128),
         style = primitive_style!(stroke_width = 0, fill_color = RgbColor::BLACK)
     )
+    .translate(Point::new(96 + 32, 32))
     .draw(&mut display)
     .unwrap();
 
-    cont.device().init().unwrap();
-    let mut volume = cont.get_volume(VolumeIdx(0)).unwrap();
-    let dir = cont.open_root_dir(&volume).unwrap();
+    if cont.device().init().is_err() {
+        Text::new("init error. SD plugged in?", Point::new(5, 50))
+            .into_styled(TextStyle::new(Font6x8, RgbColor::WHITE))
+            .draw(&mut display)
+            .unwrap();
+        loop {}
+    }
+
+    let volume = cont.get_volume(VolumeIdx(0));
+    if volume.is_err() {
+        Text::new("get_volume error. Formatted?", Point::new(5, 50))
+            .into_styled(TextStyle::new(Font6x8, RgbColor::WHITE))
+            .draw(&mut display)
+            .unwrap();
+        loop {}
+    }
+    let mut volume = volume.unwrap();
+
+    let dir = cont.open_root_dir(&volume);
+    if dir.is_err() {
+        Text::new("open_root_dir error. ???", Point::new(5, 50))
+            .into_styled(TextStyle::new(Font6x8, RgbColor::WHITE))
+            .draw(&mut display)
+            .unwrap();
+        loop {}
+    }
+    let dir = dir.unwrap();
 
     let mut scratch = [0u8; 11008];
 
@@ -96,7 +121,11 @@ fn main() -> ! {
 
                 cont.close_file(&volume, f).ok();
             } else {
-                red_led.set_high().unwrap();
+                Text::new("read error. ???", Point::new(5, 50))
+                    .into_styled(TextStyle::new(Font6x8, RgbColor::WHITE))
+                    .draw(&mut display)
+                    .unwrap();
+                loop {}
             }
             delay.delay_ms(200u8);
         }
