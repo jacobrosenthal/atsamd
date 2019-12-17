@@ -1,8 +1,14 @@
 //! Place a series of bitmap image on the screen from the sd card.
 //! Install Imagemagick and convert 3 pngs from https://rustacean.net/ to centered 86x64 size .raw bytes (where 11008 is 86x64x2)
-//! convert -resize 86x64^ -gravity center -extent 86x64 -background black rustacean-orig-noshadow.png -flip -type truecolor -define bmp:subtype=RGB565 -depth 16 -strip ferris.bmp && tail -c 11008 ferris.bmp > ferris.raw
-//! convert -resize 86x64^ -gravity center -extent 86x64 -background black rustacean-flat-gesture.png -flip -type truecolor -define bmp:subtype=RGB565 -depth 16 -strip ferris1.bmp && tail -c 11008 ferris1.bmp > ferris1.raw
-//! convert -resize 86x64^ -gravity center -extent 86x64 -background black rustacean-flat-happy.png -flip -type truecolor -define bmp:subtype=RGB565 -depth 16 -strip ferris2.bmp && tail -c 11008 ferris2.bmp > ferris2.raw
+//! convert -resize 86x64^ -gravity center -extent 86x64 -background black
+//! rustacean-orig-noshadow.png -flip -type truecolor -define bmp:subtype=RGB565
+//! -depth 16 -strip ferris.bmp && tail -c 11008 ferris.bmp > ferris.raw convert
+//! -resize 86x64^ -gravity center -extent 86x64 -background black
+//! rustacean-flat-gesture.png -flip -type truecolor -define bmp:subtype=RGB565
+//! -depth 16 -strip ferris1.bmp && tail -c 11008 ferris1.bmp > ferris1.raw
+//! convert -resize 86x64^ -gravity center -extent 86x64 -background black
+//! rustacean-flat-happy.png -flip -type truecolor -define bmp:subtype=RGB565
+//! -depth 16 -strip ferris2.bmp && tail -c 11008 ferris2.bmp > ferris2.raw
 //! cp *.raw /Volumes/SDCARD/
 
 #![no_std]
@@ -71,15 +77,14 @@ fn main() -> ! {
         bottom_right = (160, 128),
         style = primitive_style!(stroke_width = 0, fill_color = RgbColor::BLACK)
     )
-    .translate(Point::new(96 + 32, 32))
     .draw(&mut display)
-    .unwrap();
+    .ok();
 
     if cont.device().init().is_err() {
         Text::new("init error. SD plugged in?", Point::new(5, 50))
             .into_styled(TextStyle::new(Font6x8, RgbColor::WHITE))
             .draw(&mut display)
-            .unwrap();
+            .ok();
         loop {}
     }
 
@@ -88,7 +93,7 @@ fn main() -> ! {
         Text::new("get_volume error. Formatted?", Point::new(5, 50))
             .into_styled(TextStyle::new(Font6x8, RgbColor::WHITE))
             .draw(&mut display)
-            .unwrap();
+            .ok();
         loop {}
     }
     let mut volume = volume.unwrap();
@@ -98,7 +103,7 @@ fn main() -> ! {
         Text::new("open_root_dir error. ???", Point::new(5, 50))
             .into_styled(TextStyle::new(Font6x8, RgbColor::WHITE))
             .draw(&mut display)
-            .unwrap();
+            .ok();
         loop {}
     }
     let dir = dir.unwrap();
@@ -113,18 +118,18 @@ fn main() -> ! {
             if let Ok(mut f) =
                 cont.open_file_in_dir(&mut volume, &dir, image, embedded_sdmmc::Mode::ReadOnly)
             {
-                cont.read(&volume, &mut f, &mut scratch).unwrap();
+                cont.read(&volume, &mut f, &mut scratch).ok();
 
                 let raw_image: ImageRawLE<Rgb565> = ImageRaw::new(&scratch, 86, 64);
                 let ferris: Image<_, Rgb565> = Image::new(&raw_image, Point::new(32, 32));
-                ferris.draw(&mut display).unwrap();
+                ferris.draw(&mut display).ok();
 
                 cont.close_file(&volume, f).ok();
             } else {
                 Text::new("read error. ???", Point::new(5, 50))
                     .into_styled(TextStyle::new(Font6x8, RgbColor::WHITE))
                     .draw(&mut display)
-                    .unwrap();
+                    .ok();
                 loop {}
             }
             delay.delay_ms(200u8);
