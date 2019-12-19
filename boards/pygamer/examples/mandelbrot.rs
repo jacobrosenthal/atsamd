@@ -8,12 +8,13 @@ use panic_halt;
 use pygamer as hal;
 
 use embedded_graphics::drawable::Pixel;
-use embedded_graphics::pixelcolor::{Rgb565, RgbColor};
+use embedded_graphics::pixelcolor::RgbColor;
 use embedded_graphics::prelude::*;
 
 use hal::clock::GenericClockController;
 use hal::entry;
 use hal::pac::{CorePeripherals, Peripherals};
+use itertools::Itertools;
 use num::Complex;
 
 /// The width and height of the display
@@ -55,13 +56,9 @@ fn main() -> ! {
     let scalex = (cxmax - cxmin) / DISP_SIZE_X as f32;
     let scaley = (cymax - cymin) / DISP_SIZE_Y as f32;
 
-    let mut scratch = [0u16; DISP_SIZE_Y];
-
-    // todo ideally turn this into a iterator that yields x,y
-    // and map those into pixels, but I dont know how to make a
-    // row/column iterator like that
-    for x in 0..DISP_SIZE_X {
-        for y in 0..DISP_SIZE_Y {
+    (0..DISP_SIZE_X)
+        .cartesian_product(0..DISP_SIZE_Y)
+        .map(|(x, y)| {
             let cx = cxmin + x as f32 * scalex;
             let cy = cymin + y as f32 * scaley;
 
@@ -77,23 +74,17 @@ fn main() -> ! {
                 z = z * z + c;
                 i = t;
             }
-            scratch[y] = i;
-        }
 
-        scratch
-            .iter()
-            .enumerate()
-            .map(|(index, val)| {
-                //todo pixel threshold?
-                let color = if *val > 10 {
-                    RgbColor::RED
-                } else {
-                    RgbColor::BLACK
-                };
-                Pixel::<Rgb565>(Point::new(x as i32, index as i32), color)
-            })
-            .draw(&mut display);
-    }
+            //todo pixel threshold?
+            let color = if i > 10 {
+                RgbColor::RED
+            } else {
+                RgbColor::BLACK
+            };
+
+            Pixel(Point::new(x as i32, y as i32), color)
+        })
+        .draw(&mut display);
 
     loop {}
 }
