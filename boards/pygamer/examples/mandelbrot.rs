@@ -8,7 +8,7 @@ use panic_halt;
 use pygamer as hal;
 
 use embedded_graphics::drawable::Pixel;
-use embedded_graphics::pixelcolor::RgbColor;
+use embedded_graphics::pixelcolor::Rgb565;
 use embedded_graphics::prelude::*;
 
 use hal::clock::GenericClockController;
@@ -16,6 +16,8 @@ use hal::entry;
 use hal::pac::{CorePeripherals, Peripherals};
 use itertools::Itertools;
 use num::Complex;
+
+use smart_leds::hsv::{hsv2rgb, Hsv};
 
 /// The width and height of the display
 const DISP_SIZE_X: usize = 160;
@@ -75,14 +77,16 @@ fn main() -> ! {
                 i = t;
             }
 
-            //todo pixel threshold?
-            let color = if i > 10 {
-                RgbColor::RED
-            } else {
-                RgbColor::BLACK
-            };
+            let color = hsv2rgb(Hsv {
+                hue: i as u8,
+                sat: 255,
+                val: 32,
+            });
 
-            Pixel(Point::new(x as i32, y as i32), color)
+            Pixel(
+                Point::new(x as i32, y as i32),
+                Rgb565::new(color.r, color.g, color.b),
+            )
         })
         .draw(&mut display);
 
