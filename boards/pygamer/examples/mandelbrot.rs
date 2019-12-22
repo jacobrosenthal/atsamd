@@ -13,10 +13,11 @@ use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::style::PrimitiveStyle;
 
+use hal::adc::Adc;
 use hal::clock::GenericClockController;
 use hal::entry;
+use hal::pac::gclk::pchctrl::GEN_A::GCLK11;
 use hal::pac::{CorePeripherals, Peripherals};
-use hal::pins::Keys;
 use itertools::Itertools;
 use num::Complex;
 
@@ -28,12 +29,12 @@ use smart_leds::hsv::{hsv2rgb, Hsv};
 const DISP_SIZE_X: i32 = 160;
 const DISP_SIZE_Y: i32 = 128;
 
-const KEYBOARD_DELTA: i32 = 5;
-const FOREGROUND_COLOR: Rgb565 = RgbColor::RED;
-const FOREGROUND_SIZE: i32 = 10;
+const DELTA: i16 = 2;
+const CHARACTER_COLOR: Rgb565 = RgbColor::RED;
+const CHARACTER_SIZE: i32 = 10;
 
 //todo good variable choices?
-const MAX_ITERATIONS: u16 = 256u16;
+const MAX_ITERATIONS: u8 = 255;
 const CXMIN: f32 = -2f32;
 const CXMAX: f32 = 1f32;
 const CYMIN: f32 = -1.5f32;
@@ -41,7 +42,7 @@ const CYMAX: f32 = 1.5f32;
 const SCALEX: f32 = (CXMAX - CXMIN) / DISP_SIZE_X as f32;
 const SCALEY: f32 = (CYMAX - CYMIN) / DISP_SIZE_Y as f32;
 
-fn to_pixels(triple: (i32, i32, u16)) -> Pixel<Rgb565> {
+fn to_pixels(triple: (i32, i32, u32)) -> Pixel<Rgb565> {
     let color = hsv2rgb(Hsv {
         hue: triple.2 as u8,
         sat: 255,
@@ -53,7 +54,7 @@ fn to_pixels(triple: (i32, i32, u16)) -> Pixel<Rgb565> {
         Rgb565::new(color.r, color.g, color.b),
     )
 }
-fn mandelbrot(pair: (i32, i32)) -> (i32, i32, u16) {
+fn mandelbrot(pair: (i32, i32)) -> (i32, i32, u32) {
     let cx = CXMIN + pair.0 as f32 * SCALEX;
     let cy = CYMIN + pair.1 as f32 * SCALEY;
 
@@ -70,7 +71,7 @@ fn mandelbrot(pair: (i32, i32)) -> (i32, i32, u16) {
         i = t;
     }
 
-    (pair.0, pair.1, i)
+    (pair.0, pair.1, i as u32)
 }
 
 fn move_rectangle(
@@ -86,18 +87,28 @@ fn move_rectangle(
     position: &mut Point,
     new_position: Point,
 ) {
-    // dont allow bumping into mandelbrot set
-    let presence: u16 = (new_position.x..=(new_position.x + FOREGROUND_SIZE))
-        .cartesian_product(new_position.y..=(new_position.y + FOREGROUND_SIZE))
+    //keep within screen (including size of our pixel boy)
+    if new_position.x < 0
+        || new_position.x + CHARACTER_SIZE > DISP_SIZE_X
+        || new_position.y < 0
+        || new_position.y + CHARACTER_SIZE > DISP_SIZE_Y
+    {
+        return;
+    }
+
+    // max sum is DISP_SIZE_X*DISP_SIZE_Y*MAX_ITERATIONS
+    // 160*128*255 or 5222400 < U32 Max of 4294967295
+    let presence: u32 = (new_position.x..=(new_position.x + CHARACTER_SIZE))
+        .cartesian_product(new_position.y..=(new_position.y + CHARACTER_SIZE))
         .map(mandelbrot)
         .map(|(_x, _y, i)| if i > 10 { i } else { 0 })
         .sum();
 
-    //only move if you can
-    if new_position.x > 0 && new_position.x + FOREGROUND_SIZE < DISP_SIZE_X && presence == 0 {
+    //avoid moving into mandelbrot set
+    if presence == 0 {
         // Clear old rectangle
-        (position.x..=(position.x + FOREGROUND_SIZE))
-            .cartesian_product(position.y..=(position.y + FOREGROUND_SIZE))
+        (position.x..=(position.x + CHARACTER_SIZE))
+            .cartesian_product(position.y..=(position.y + CHARACTER_SIZE))
             .map(mandelbrot)
             .map(to_pixels)
             .draw(display);
@@ -106,11 +117,11 @@ fn move_rectangle(
         Rectangle::new(
             new_position,
             Point::new(
-                new_position.x + FOREGROUND_SIZE,
-                new_position.y + FOREGROUND_SIZE,
+                new_position.x + CHARACTER_SIZE,
+                new_position.y + CHARACTER_SIZE,
             ),
         )
-        .into_styled(PrimitiveStyle::with_fill(FOREGROUND_COLOR))
+        .into_styled(PrimitiveStyle::with_fill(CHARACTER_COLOR))
         .draw(display);
 
         *position = new_position;
@@ -131,8 +142,6 @@ fn main() -> ! {
     let mut pins = hal::Pins::new(peripherals.PORT).split();
     let mut delay = hal::delay::Delay::new(core.SYST, &mut clocks);
 
-    let mut buttons = pins.buttons.init(&mut pins.port);
-
     let (mut display, _backlight) = pins
         .display
         .init(
@@ -145,6 +154,9 @@ fn main() -> ! {
         )
         .unwrap();
 
+    let mut adc1 = Adc::adc1(peripherals.ADC1, &mut peripherals.MCLK, &mut clocks, GCLK11);
+    let mut joystick = pins.joystick.init(&mut pins.port);
+
     //draw background
     (0..DISP_SIZE_X)
         .cartesian_product(0..DISP_SIZE_Y)
@@ -156,28 +168,35 @@ fn main() -> ! {
     let mut position = Point::new(0, 20);
     Rectangle::new(
         position,
-        Point::new(position.x + FOREGROUND_SIZE, position.y + FOREGROUND_SIZE),
+        Point::new(position.x + CHARACTER_SIZE, position.y + CHARACTER_SIZE),
     )
-    .into_styled(PrimitiveStyle::with_fill(FOREGROUND_COLOR))
+    .into_styled(PrimitiveStyle::with_fill(CHARACTER_COLOR))
     .draw(&mut display);
 
     loop {
-        //buttons.. todo use analog joystick .. vector is how much to offset?
-        for event in buttons.events() {
-            match event {
-                Keys::SelectDown => {
-                    let delta = Point::new(-KEYBOARD_DELTA, 0);
-                    let new_position = position + delta;
-                    move_rectangle(&mut display, &mut position, new_position);
-                }
-                Keys::StartDown => {
-                    let delta = Point::new(KEYBOARD_DELTA, 0);
-                    let new_position = position + delta;
-                    move_rectangle(&mut display, &mut position, new_position);
-                }
+        let (x, y) = joystick.read(&mut adc1);
 
-                _ => {}
-            }
-        }
+        //zero around zero
+        // let x: i16 = x as i16 - 2048;
+        // let y: i16 = y as i16 - 2048;
+
+        //map up/down to control rainbow color 0-255
+        let x = map_from(x as i16, (0, 4095), (-DELTA, DELTA));
+        let y = map_from(y as i16, (0, 4095), (-DELTA, DELTA));
+
+        // ///ie just add our x and y, scaled down?, to existing point
+        let new_position = Point::new(position.x + x as i32, position.y + y as i32);
+        move_rectangle(&mut display, &mut position, new_position);
     }
+}
+
+fn map_from(input: i16, from_range: (i16, i16), to_range: (i16, i16)) -> i16 {
+    debug_assert!(from_range.0 < from_range.1);
+    debug_assert!(to_range.0 < to_range.1);
+    debug_assert!(input >= from_range.0);
+    debug_assert!(input <= from_range.1);
+
+    let from: f32 = (from_range.1 - from_range.0).into();
+    let to: f32 = (to_range.1 - to_range.0).into();
+    ((input - from_range.0) as f32 / from * to + to_range.0 as f32) as i16
 }
