@@ -7,7 +7,6 @@
 use panic_halt;
 use pygamer as hal;
 
-use embedded_graphics::pixelcolor::Rgb565;
 use embedded_graphics::prelude::*;
 
 use hal::clock::GenericClockController;
@@ -16,7 +15,6 @@ use hal::pac::{CorePeripherals, Peripherals};
 
 use heapless::consts::*;
 use heapless::Vec;
-use itertools::Itertools;
 
 mod life;
 use life::{Cell, Universe};
@@ -60,27 +58,17 @@ fn main() -> ! {
 
     loop {
         universe.tick();
-        universe.draw(&mut display);
-    }
-}
 
-trait Viewer<T: embedded_graphics::pixelcolor::PixelColor> {
-    fn draw(&mut self, display: &mut impl DrawTarget<T>);
-}
-
-impl Viewer<Rgb565> for life::Universe {
-    fn draw(&mut self, display: &mut impl DrawTarget<Rgb565>) {
-        (0..self.height)
-            .cartesian_product(0..self.width)
-            .map(|(row, col)| {
-                let idx = self.get_index(row, col);
-                //feels odd, but x = column index, y=row_index
-                if self.cells[idx] == Cell::Alive {
-                    Pixel::<Rgb565>(Point::new(col as i32, row as i32), RgbColor::RED)
+        universe
+            .iter()
+            .map(|(row, col, cell)| {
+                let color = if cell == Cell::Alive {
+                    RgbColor::RED
                 } else {
-                    Pixel::<Rgb565>(Point::new(col as i32, row as i32), RgbColor::BLACK)
-                }
+                    RgbColor::BLACK
+                };
+                Pixel(Point::new(col as i32, row as i32), color)
             })
-            .draw(display);
+            .draw(&mut display);
     }
 }

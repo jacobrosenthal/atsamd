@@ -2,16 +2,16 @@
 
 use heapless::consts::*;
 
-#[derive(Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum Cell {
     Dead = 0,
     Alive = 1,
 }
 
 pub struct Universe {
-    pub width: u32,
-    pub height: u32,
-    pub cells: heapless::Vec<Cell, U32768>,
+    width: u32,
+    height: u32,
+    cells: heapless::Vec<Cell, U32768>,
     next_cells: heapless::Vec<Cell, U32768>,
 }
 
@@ -44,7 +44,7 @@ impl Universe {
     }
 
     // min 0,0 = 0, max 127,159 = 127 * 160 + 159 = 20479
-    pub fn get_index(&self, row: u32, column: u32) -> usize {
+    fn get_index(&self, row: u32, column: u32) -> usize {
         (row * self.width + column) as usize
     }
 
@@ -95,5 +95,20 @@ impl Universe {
 
         //swap the working copy
         core::mem::swap(&mut self.next_cells, &mut self.cells);
+    }
+
+    //todo lifetime ok?
+    pub fn iter(&mut self) -> impl Iterator<Item = (u32, u32, Cell)> + '_ {
+        let width = self.width;
+        let size = (self.width * self.height) as usize;
+        self.cells[..size]
+            .iter()
+            .enumerate()
+            .map(move |(idx, cell)| {
+                let index = idx as u32;
+                let row = index / width;
+                let column = index % width;
+                (row, column, *cell)
+            })
     }
 }
