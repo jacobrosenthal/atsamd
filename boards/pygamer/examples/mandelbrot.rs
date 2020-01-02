@@ -175,16 +175,16 @@ fn main() -> ! {
 
     loop {
         let (x, y) = joystick.read(&mut adc1);
+        //dont bother redrawing if joystick centered
+        if x > 2048 && x < 2096 || y > 2048 && y < 2096 {
+            continue;
+        }
 
-        //zero around zero
-        // let x: i16 = x as i16 - 2048;
-        // let y: i16 = y as i16 - 2048;
-
-        //map up/down to control rainbow color 0-255
+        //map up/down to move pixel guy
         let x = map_from(x as i16, (0, 4095), (-DELTA, DELTA));
         let y = map_from(y as i16, (0, 4095), (-DELTA, DELTA));
 
-        // ///ie just add our x and y, scaled down?, to existing point
+        //ie just add our x and y, scaled down, to existing point position
         let new_position = Point::new(position.x + x as i32, position.y + y as i32);
         move_rectangle(&mut display, &mut position, new_position);
     }
