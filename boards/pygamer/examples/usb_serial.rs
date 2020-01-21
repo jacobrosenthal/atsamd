@@ -11,7 +11,11 @@
 /// $> sudo bash -c "echo 'G' > /dev/ttyACM0"
 /// $> sudo bash -c "echo 'O' > /dev/ttyACM0"
 #[allow(unused_imports)]
-use panic_halt;
+#[cfg(not(feature = "use_rtt"))]
+use panic_halt as _;
+#[cfg(feature = "use_rtt")]
+use panic_rtt as _;
+
 use pygamer as hal;
 
 use cortex_m::interrupt::free as disable_interrupts;
@@ -30,6 +34,10 @@ use hal::timer::SpinTimer;
 use smart_leds::{hsv::RGB8, SmartLedsWrite};
 
 const NUM_LEDS: usize = 5;
+
+pub use hal::dbgprint;
+#[cfg(feature = "use_uart_debug")]
+pub use hal::uart_debug;
 
 #[entry]
 fn main() -> ! {
@@ -76,6 +84,7 @@ fn main() -> ! {
     unsafe {
         core.NVIC.set_priority(interrupt::USB_OTHER, 1);
         core.NVIC.set_priority(interrupt::USB_TRCPT0, 1);
+        core.NVIC.set_priority(interrupt::USB_TRCPT1, 1);
         core.NVIC.set_priority(interrupt::USB_TRCPT1, 1);
         NVIC::unmask(interrupt::USB_OTHER);
         NVIC::unmask(interrupt::USB_TRCPT0);
@@ -133,15 +142,18 @@ fn poll_usb() {
 
 #[interrupt]
 fn USB_OTHER() {
+    dbgprint!("USB_OTHER");
     poll_usb();
 }
 
 #[interrupt]
 fn USB_TRCPT0() {
+    dbgprint!("USB_TRCPT0");
     poll_usb();
 }
 
 #[interrupt]
 fn USB_TRCPT1() {
+    dbgprint!("USB_TRCPT1");
     poll_usb();
 }

@@ -28,3 +28,6 @@ pub mod util {
         ((input - from_range.0) as f32 / from * to + to_range.0 as f32) as i16
     }
 }
+
+#[cfg(feature = "use_rtt")]
+pub use hal::dbgprint;
