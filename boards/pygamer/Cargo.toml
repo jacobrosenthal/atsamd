@@ -40,6 +40,7 @@ optional = true
 version = "~0.3"
 
 [dev-dependencies]
+panic_rtt = "0.2.0"
 panic-halt = "~0.2"
 embedded-graphics = "0.6.0"
 smart-leds = "0.3"
@@ -63,6 +64,7 @@ unproven = ["atsamd-hal/unproven"]
 usb = ["atsamd-hal/usb", "usb-device", "usbd-serial"]
 sd-card = ["embedded-sdmmc"]
 math = ["micromath"]
+use_rtt = ["atsamd-hal/use_rtt"]
 
 [profile.dev]
 incremental = false
