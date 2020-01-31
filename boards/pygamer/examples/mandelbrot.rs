@@ -21,8 +21,6 @@ use hal::pac::{CorePeripherals, Peripherals};
 use itertools::Itertools;
 use num::Complex;
 
-use hal::gpio;
-
 use smart_leds::hsv::{hsv2rgb, Hsv};
 
 /// The width and height of the display
@@ -74,19 +72,7 @@ fn mandelbrot(pair: (i32, i32)) -> (i32, i32, u32) {
     (pair.0, pair.1, i as u32)
 }
 
-fn move_rectangle(
-    display: &mut st7735_lcd::ST7735<
-        hal::sercom::SPIMaster4<
-            hal::sercom::Sercom4Pad2<gpio::Pb14<gpio::PfC>>,
-            hal::sercom::Sercom4Pad3<gpio::Pb15<gpio::PfC>>,
-            hal::sercom::Sercom4Pad1<gpio::Pb13<gpio::PfC>>,
-        >,
-        hal::gpio::Pb5<gpio::Output<gpio::PushPull>>,
-        hal::gpio::Pa0<gpio::Output<gpio::PushPull>>,
-    >,
-    position: &mut Point,
-    new_position: Point,
-) {
+fn move_rectangle(display: &mut hal::pins::DispType, position: &mut Point, new_position: Point) {
     //keep within screen (including size of our pixel boy)
     if new_position.x < 0
         || new_position.x + CHARACTER_SIZE > DISP_SIZE_X

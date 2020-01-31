@@ -322,6 +322,16 @@ pub struct Display {
     pub tft_backlight: Pa1<Input<Floating>>,
 }
 
+pub type DispType = ST7735<
+    SPIMaster4<
+        Sercom4Pad2<gpio::Pb14<gpio::PfC>>,
+        Sercom4Pad3<gpio::Pb15<gpio::PfC>>,
+        Sercom4Pad1<gpio::Pb13<gpio::PfC>>,
+    >,
+    gpio::Pb5<Output<PushPull>>,
+    gpio::Pa0<Output<PushPull>>,
+>;
+
 #[cfg(feature = "unproven")]
 impl Display {
     /// Convenience for setting up the on board display.
@@ -333,21 +343,7 @@ impl Display {
         timer2: pac::TC2,
         delay: &mut hal::delay::Delay,
         port: &mut Port,
-    ) -> Result<
-        (
-            ST7735<
-                SPIMaster4<
-                    Sercom4Pad2<gpio::Pb14<gpio::PfC>>,
-                    Sercom4Pad3<gpio::Pb15<gpio::PfC>>,
-                    Sercom4Pad1<gpio::Pb13<gpio::PfC>>,
-                >,
-                gpio::Pb5<Output<PushPull>>,
-                gpio::Pa0<Output<PushPull>>,
-            >,
-            atsamd_hal::samd51::pwm::Pwm2,
-        ),
-        (),
-    > {
+    ) -> Result<(DispType, atsamd_hal::samd51::pwm::Pwm2), ()> {
         let gclk0 = clocks.gclk0();
         let tft_spi = SPIMaster4::new(
             &clocks.sercom4_core(&gclk0).ok_or(())?,
@@ -424,6 +420,12 @@ pub struct SPI {
     pub sck: gpio::Pa17<Input<Floating>>,
 }
 
+pub type SPItype = SPIMaster1<
+    hal::sercom::Sercom1Pad2<gpio::Pb22<gpio::PfC>>,
+    hal::sercom::Sercom1Pad3<gpio::Pb23<gpio::PfC>>,
+    hal::sercom::Sercom1Pad1<gpio::Pa17<gpio::PfC>>,
+>;
+
 impl SPI {
     /// Convenience for setting up the labelled pins to operate
     /// as an SPI master, running at the specified frequency.
@@ -434,11 +436,7 @@ impl SPI {
         sercom1: pac::SERCOM1,
         mclk: &mut MCLK,
         port: &mut Port,
-    ) -> SPIMaster1<
-        hal::sercom::Sercom1Pad2<gpio::Pb22<gpio::PfC>>,
-        hal::sercom::Sercom1Pad3<gpio::Pb23<gpio::PfC>>,
-        hal::sercom::Sercom1Pad1<gpio::Pa17<gpio::PfC>>,
-    > {
+    ) -> SPItype {
         let gclk0 = clocks.gclk0();
         SPIMaster1::new(
             &clocks.sercom1_core(&gclk0).unwrap(),

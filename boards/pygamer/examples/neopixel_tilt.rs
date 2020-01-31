@@ -84,10 +84,8 @@ fn main() -> ! {
                 if pos > 0 {
                     pos -= 1;
                 }
-            } else {
-                if pos < 4 {
-                    pos += 1;
-                }
+            } else if pos < 4 {
+                pos += 1;
             }
             tilt = 0;
         }

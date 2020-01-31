@@ -101,8 +101,8 @@ static mut PENDING_COLOR: Option<[RGB8; NUM_LEDS]> = None;
 
 fn poll_usb() {
     unsafe {
-        USB_BUS.as_mut().map(|usb_dev| {
-            USB_SERIAL.as_mut().map(|serial| {
+        if let Some(usb_dev) = USB_BUS.as_mut() {
+            if let Some(serial) = USB_SERIAL.as_mut() {
                 usb_dev.poll(&mut [serial]);
 
                 let mut buf = [0u8; 64];
@@ -112,7 +112,7 @@ fn poll_usb() {
                         if i > count {
                             break;
                         }
-                        match c.clone() as char {
+                        match *c as char {
                             'R' => {
                                 PENDING_COLOR = Some([RGB8 { r: 120, g: 0, b: 0 }; NUM_LEDS]);
                             }
@@ -126,8 +126,8 @@ fn poll_usb() {
                         }
                     }
                 };
-            });
-        });
+            }
+        }
     };
 }
 
