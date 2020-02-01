@@ -1,11 +1,11 @@
+#![no_std]
+#![no_main]
 //! Joystick y controls the color of a neopixel while Joystick x moves it
 //! left and right around the center neopixel
 //! Select and Start control a second neopixel left and right while it is
 //! automatically rotating through the color wheel
 //! When they overlap, joystick takes precedence
 
-#![no_std]
-#![no_main]
 use panic_halt as _;
 use pygamer as hal;
 

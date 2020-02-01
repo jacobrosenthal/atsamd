@@ -1,15 +1,15 @@
-/// Makes the pygamer appear as a USB serial port. The color of the
-/// neopixel LED can be changed by sending bytes to the serial port.
-///
-/// Sending the characters R, G, and O set the LED red, green, and off
-/// respectively. For example:
-/// $> sudo stty -F /dev/ttyACM0 115200 raw -echo
-/// $> sudo bash -c "echo 'R' > /dev/ttyACM0"
-/// $> sudo bash -c "echo 'G' > /dev/ttyACM0"
-/// $> sudo bash -c "echo 'O' > /dev/ttyACM0"
-
 #![no_std]
 #![no_main]
+//! Makes the pygamer appear as a USB serial port. The color of the
+//! neopixel LED can be changed by sending bytes to the serial port.
+//!
+//! Sending the characters R, G, and O set the LED red, green, and off
+//! respectively. For example:
+//! $> sudo stty -F /dev/ttyACM0 115200 raw -echo
+//! $> sudo bash -c "echo 'R' > /dev/ttyACM0"
+//! $> sudo bash -c "echo 'G' > /dev/ttyACM0"
+//! $> sudo bash -c "echo 'O' > /dev/ttyACM0"
+
 use panic_halt as _;
 use pygamer as hal;
 

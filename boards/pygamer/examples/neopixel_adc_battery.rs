@@ -1,7 +1,7 @@
-//! Display battery percentage on the neopixels.
-
 #![no_std]
 #![no_main]
+//! Display battery percentage on the neopixels.
+
 use panic_halt as _;
 use pygamer as hal;
 

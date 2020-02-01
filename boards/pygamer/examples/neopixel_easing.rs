@@ -1,7 +1,7 @@
-//! Randomly choose and led and color to breath in and out
-
 #![no_std]
 #![no_main]
+//! Randomly choose and led and color to breath in and out
+
 use panic_halt as _;
 use pygamer as hal;
 

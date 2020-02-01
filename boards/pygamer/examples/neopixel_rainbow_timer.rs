@@ -1,7 +1,7 @@
-//! Rotate all neopixel leds through a rainbow. Uses a Timer as a timer source.
-
 #![no_std]
 #![no_main]
+//! Rotate all neopixel leds through a rainbow. Uses a Timer as a timer source.
+
 use panic_halt as _;
 use pygamer as hal;
 

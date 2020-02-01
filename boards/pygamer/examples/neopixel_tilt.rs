@@ -1,7 +1,8 @@
-//! LIS3DH accelerometer example. Move the neopixel led by tilting left and right.
-
 #![no_std]
 #![no_main]
+//! LIS3DH accelerometer example. Move the neopixel led by tilting left and
+//! right.
+
 use panic_halt as _;
 use pygamer as hal;
 
@@ -62,13 +63,15 @@ fn main() -> ! {
     loop {
         let lis = lis3dh.acceleration().unwrap();
 
-        //what about like.. momentum, more angle or longer its been at angle stops slower
-        //like.. steps larger so it gets easier. also on a bigger number tilt?
+        // what about like.. momentum, more angle or longer its been at angle stops
+        // slower like.. steps larger so it gets easier. also on a bigger number
+        // tilt?
 
         // naive solution.. threshold tilt
         // better.. delay filter?
 
-        // actually 2 thresholds, first you have to be tilted enough (gt / lt 1000) to be counted
+        // actually 2 thresholds, first you have to be tilted enough (gt / lt 1000) to
+        // be counted
         if lis.x > 1000 {
             tilt += 1;
         } else if lis.x < -1000 {

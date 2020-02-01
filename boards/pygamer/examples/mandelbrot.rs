@@ -1,7 +1,7 @@
-//! Generate a mandelbrot set and draw it to screen
-
 #![no_std]
 #![no_main]
+//! Generate a mandelbrot set and draw it to screen
+
 use panic_halt as _;
 use pygamer as hal;
 

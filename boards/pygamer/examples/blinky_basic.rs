@@ -1,7 +1,7 @@
-//! Blink an led without using the BSP split() method.
-
 #![no_std]
 #![no_main]
+//! Blink an led without using the BSP split() method.
+
 use panic_halt as _;
 use pygamer as hal;
 

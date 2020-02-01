@@ -1,7 +1,7 @@
-//! Use a hardware timer to wiggle a pin in the background.
-
 #![no_std]
 #![no_main]
+//! Use a hardware timer to wiggle a pin in the background.
+
 use panic_halt as _;
 use pygamer as hal;
 

@@ -1,7 +1,7 @@
-//! Display light sensor reading on the neopixels.
-
 #![no_std]
 #![no_main]
+//! Display light sensor reading on the neopixels.
+
 use panic_halt as _;
 use pygamer as hal;
 
