@@ -1,6 +1,3 @@
-#![no_std]
-#![no_main]
-
 /// Makes the pygamer appear as a USB serial port. The color of the
 /// neopixel LED can be changed by sending bytes to the serial port.
 ///
@@ -10,8 +7,10 @@
 /// $> sudo bash -c "echo 'R' > /dev/ttyACM0"
 /// $> sudo bash -c "echo 'G' > /dev/ttyACM0"
 /// $> sudo bash -c "echo 'O' > /dev/ttyACM0"
-#[allow(unused_imports)]
-use panic_halt;
+
+#![no_std]
+#![no_main]
+use panic_halt as _;
 use pygamer as hal;
 
 use cortex_m::interrupt::free as disable_interrupts;
