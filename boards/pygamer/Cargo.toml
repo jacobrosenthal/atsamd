@@ -55,12 +55,16 @@ optional = true
 version = "~0.1"
 optional = true
 
+[dependencies.usbd-hid]
+version = "~0.3.6"
+optional = true
+
 [features]
 # ask the HAL to enable atsamd51j20a support
 default = ["rt", "atsamd-hal/samd51j19a", "atsamd-hal/samd51", "unproven"]
 rt = ["cortex-m-rt", "atsamd-hal/samd51j19a-rt"]
 unproven = ["atsamd-hal/unproven"]
-usb = ["atsamd-hal/usb", "usb-device", "usbd-serial"]
+usb = ["atsamd-hal/usb", "usb-device", "usbd-serial", "usbd-hid"]
 sd-card = ["embedded-sdmmc"]
 math = ["micromath"]
 
@@ -90,3 +94,7 @@ required-features = ["sd-card"]
 [[example]]
 name = "neopixel_easing"
 required-features = [ "math"]
+
+[[example]]
+name = "twitching_usb_mouse"
+required-features = ["usb"]
