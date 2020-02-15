@@ -9,7 +9,6 @@ use hal::clock::GenericClockController;
 use hal::entry;
 use hal::pac::gclk::pchctrl::GEN_A::GCLK11;
 use hal::pac::{interrupt, CorePeripherals, Peripherals};
-use hal::prelude::*;
 
 use hal::usb::UsbBus;
 use usb_device::bus::UsbBusAllocator;
@@ -34,9 +33,6 @@ fn main() -> ! {
     );
 
     let mut pins = hal::Pins::new(peripherals.PORT).split();
-    let mut red_led = pins.led_pin.into_open_drain_output(&mut pins.port);
-    red_led.set_low().unwrap();
-
     let mut buttons = pins.buttons.init(&mut pins.port);
     let mut adc1 = Adc::adc1(peripherals.ADC1, &mut peripherals.MCLK, &mut clocks, GCLK11);
     let mut joystick = pins.joystick.init(&mut pins.port);
@@ -73,23 +69,22 @@ fn main() -> ! {
     }
 
     loop {
+        //do the readings outside of the critical section
+        //center x and y around 0, i16 ok?
         let (x, y) = joystick.read(&mut adc1);
-        //four buttons
+        let x = (x - 2048) as i16;
+        let y = (y - 2048) as i16;
+
         let buttons = buttons.mask();
 
-        cycle_delay(25 * 1024 * 1024);
-        push_mouse_movement(JoystickReport {
-            x: x as i8,
-            y: y as i8,
-            buttons,
-        })
-        .ok()
-        .unwrap_or(0);
-    }
-}
+        disable_interrupts(|_| unsafe {
+            USB_HID
+                .as_mut()
+                .map(|hid| hid.push_input(&JoystickReport { x, y, buttons }))
+        });
 
-fn push_mouse_movement(report: JoystickReport) -> Result<usize, usb_device::UsbError> {
-    disable_interrupts(|_| unsafe { USB_HID.as_mut().map(|hid| hid.push_input(&report)) }).unwrap()
+        cycle_delay(25 * 1024 * 1024);
+    }
 }
 
 static mut USB_ALLOCATOR: Option<UsbBusAllocator<UsbBus>> = None;
