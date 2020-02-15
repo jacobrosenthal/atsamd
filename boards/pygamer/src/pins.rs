@@ -718,12 +718,29 @@ pub struct ButtonReader {
 //tsu min setup time 55ns = 7 cycles
 //th min hold time 5ns = 1 cycles
 //tw min pulse width 36ns = 5 cycles
-//trec min recovery time 55ns, how long before you should attempt to read again?
+//trec min recovery time 55ns, how long before you should attempt to read
+// again?
 #[cfg(feature = "unproven")]
 impl ButtonReader {
-    // 28*8.333ns total blocking read
     /// Returns a ButtonIter of button changes as Keys enums
+    /// 28*8.333ns total blocking read
     pub fn events(&mut self) -> ButtonIter {
+        let current = self.mask();
+
+        let iter = ButtonIter {
+            pressed: (self.last ^ current) & current,
+            released: (self.last ^ current) & self.last,
+            bit_index: 0,
+        };
+
+        self.last = current;
+
+        iter
+    }
+
+    /// Returns a mask of button presses, 1 for pressed
+    /// 28*8.333ns total blocking read
+    pub fn mask(&mut self) -> u8 {
         self.latch.set_low().ok();
         cycle_delay(7); //tsu?
         self.latch.set_high().ok();
@@ -744,15 +761,7 @@ impl ButtonReader {
             self.clock.set_high().ok();
         }
 
-        let iter = ButtonIter {
-            pressed: (self.last ^ current) & current,
-            released: (self.last ^ current) & self.last,
-            bit_index: 0,
-        };
-
-        self.last = current;
-
-        iter
+        current
     }
 }
 
@@ -791,8 +800,9 @@ impl JoystickReader {
     /// returns a tuple (x,y) where values are 12 bit, between 0-4095
     /// values are NOT centered, but could be by subtracting 2048
     pub fn read(&mut self, adc: &mut hal::adc::Adc<ADC1>) -> (u16, u16) {
-        //note adafruit averages 3 readings on x and y (not inside the adc) seems unnecessary?
-        //note adafruit recenters around zero.. Im not doing that either atm.
+        //note adafruit averages 3 readings on x and y (not inside the adc) seems
+        // unnecessary? note adafruit recenters around zero.. Im not doing that
+        // either atm.
 
         let y_data: u16 = adc.read(&mut self.joy_y).unwrap();
         let x_data: u16 = adc.read(&mut self.joy_x).unwrap();

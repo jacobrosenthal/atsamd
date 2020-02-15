@@ -4,16 +4,17 @@
 use panic_halt as _;
 use pygamer as hal;
 
+use hal::adc::Adc;
 use hal::clock::GenericClockController;
 use hal::entry;
+use hal::pac::gclk::pchctrl::GEN_A::GCLK11;
 use hal::pac::{interrupt, CorePeripherals, Peripherals};
 use hal::prelude::*;
 
 use hal::usb::UsbBus;
 use usb_device::bus::UsbBusAllocator;
 use usb_device::prelude::*;
-use usbd_hid::descriptor::generator_prelude::*;
-use usbd_hid::descriptor::MouseReport;
+use usbd_hid::descriptor::{JoystickReport, SerializedDescriptor};
 use usbd_hid::hid_class::HIDClass;
 
 use cortex_m::asm::delay as cycle_delay;
@@ -36,6 +37,10 @@ fn main() -> ! {
     let mut red_led = pins.led_pin.into_open_drain_output(&mut pins.port);
     red_led.set_low().unwrap();
 
+    let mut buttons = pins.buttons.init(&mut pins.port);
+    let mut adc1 = Adc::adc1(peripherals.ADC1, &mut peripherals.MCLK, &mut clocks, GCLK11);
+    let mut joystick = pins.joystick.init(&mut pins.port);
+
     let bus_allocator = unsafe {
         USB_ALLOCATOR = Some(pins.usb.init(
             peripherals.USB,
@@ -47,13 +52,13 @@ fn main() -> ! {
     };
 
     unsafe {
-        USB_HID = Some(HIDClass::new(&bus_allocator, MouseReport::desc(), 60));
+        USB_HID = Some(HIDClass::new(&bus_allocator, JoystickReport::desc(), 60));
         USB_BUS = Some(
             UsbDeviceBuilder::new(&bus_allocator, UsbVidPid(0x16c0, 0x27dd))
                 .manufacturer("Fake company")
                 .product("Twitchy Mousey")
                 .serial_number("TEST")
-                .device_class(0xEF) // misc
+                .device_class(0x3) // HID (mice, keyboards, joysticks, gamepads)
                 .build(),
         );
     }
@@ -68,26 +73,22 @@ fn main() -> ! {
     }
 
     loop {
+        let (x, y) = joystick.read(&mut adc1);
+        //four buttons
+        let buttons = buttons.mask();
+
         cycle_delay(25 * 1024 * 1024);
-        push_mouse_movement(MouseReport {
-            x: 0,
-            y: 4,
-            buttons: 0,
-        })
-        .ok()
-        .unwrap_or(0);
-        cycle_delay(25 * 1024 * 1024);
-        push_mouse_movement(MouseReport {
-            x: 0,
-            y: -4,
-            buttons: 0,
+        push_mouse_movement(JoystickReport {
+            x: x as i8,
+            y: y as i8,
+            buttons,
         })
         .ok()
         .unwrap_or(0);
     }
 }
 
-fn push_mouse_movement(report: MouseReport) -> Result<usize, usb_device::UsbError> {
+fn push_mouse_movement(report: JoystickReport) -> Result<usize, usb_device::UsbError> {
     disable_interrupts(|_| unsafe { USB_HID.as_mut().map(|hid| hid.push_input(&report)) }).unwrap()
 }
 
