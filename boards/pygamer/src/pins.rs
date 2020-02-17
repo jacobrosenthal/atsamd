@@ -725,7 +725,7 @@ impl ButtonReader {
     /// Returns a ButtonIter of button changes as Keys enums
     /// 28*8.333ns total blocking read
     pub fn events(&mut self) -> ButtonIter {
-        let current = self.mask();
+        let current = self.read();
 
         let iter = ButtonIter {
             pressed: (self.last ^ current) & current,
@@ -740,7 +740,7 @@ impl ButtonReader {
 
     /// Returns a mask of button presses, 1 for pressed
     /// 28*8.333ns total blocking read
-    pub fn mask(&mut self) -> u8 {
+    pub fn read(&mut self) -> u8 {
         self.latch.set_low().ok();
         cycle_delay(7); //tsu?
         self.latch.set_high().ok();

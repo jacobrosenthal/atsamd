@@ -72,10 +72,10 @@ fn main() -> ! {
         //do the readings outside of the critical section
         //center x and y around 0, i16 ok?
         let (x, y) = joystick.read(&mut adc1);
-        let x = (x - 2048) as i16;
-        let y = (y - 2048) as i16;
+        let x = (x - 2048) as i8;
+        let y = (y - 2048) as i8;
 
-        let buttons = buttons.mask();
+        let buttons = buttons.read();
 
         disable_interrupts(|_| unsafe {
             USB_HID
