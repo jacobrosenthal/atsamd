@@ -1,6 +1,6 @@
 # vim:ft=toml:
 [target.thumbv7em-none-eabihf]
-runner = 'arm-none-eabi-gdb'
+runner = "gdb-multiarch -q"
 
 [build]
 target = "thumbv7em-none-eabihf"

@@ -35,6 +35,7 @@ use smart_leds::{hsv::RGB8, SmartLedsWrite};
 
 const NUM_LEDS: usize = 5;
 
+#[cfg(feature = "use_rtt")]
 pub use hal::dbgprint;
 #[cfg(feature = "use_uart_debug")]
 pub use hal::uart_debug;
@@ -142,18 +143,21 @@ fn poll_usb() {
 
 #[interrupt]
 fn USB_OTHER() {
+    #[cfg(feature = "use_rtt")]
     dbgprint!("USB_OTHER");
     poll_usb();
 }
 
 #[interrupt]
 fn USB_TRCPT0() {
+    #[cfg(feature = "use_rtt")]
     dbgprint!("USB_TRCPT0");
     poll_usb();
 }
 
 #[interrupt]
 fn USB_TRCPT1() {
+    #[cfg(feature = "use_rtt")]
     dbgprint!("USB_TRCPT1");
     poll_usb();
 }
