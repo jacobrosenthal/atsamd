@@ -1,9 +1,13 @@
 # vim:ft=toml:
 [target.thumbv7em-none-eabihf]
-runner = 'arm-none-eabi-gdb'
+runner = "arm-none-eabi-gdb"
 
 [build]
 target = "thumbv7em-none-eabihf"
 rustflags = [
    "-C", "link-arg=-Tlink.x",
 ]
+
+# build.rs dependencies fix #5730
+[unstable]
+features = ["host_dep"]

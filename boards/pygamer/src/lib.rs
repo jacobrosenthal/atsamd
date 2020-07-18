@@ -1,6 +1,10 @@
 #![no_std]
 #![recursion_limit = "1024"]
 
+
+#[cfg(feature = "use_rtt")]
+pub use hal::dbgprint;
+
 pub mod pins;
 use atsamd_hal as hal;
 

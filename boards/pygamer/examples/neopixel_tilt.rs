@@ -19,7 +19,7 @@ use smart_leds::{
     SmartLedsWrite,
 };
 
-use lis3dh::{accelerometer::Accelerometer, Lis3dh};
+use lis3dh::{accelerometer::RawAccelerometer, Lis3dh, SlaveAddr};
 
 #[entry]
 fn main() -> ! {
@@ -50,7 +50,8 @@ fn main() -> ! {
         &mut pins.port,
     );
 
-    let mut lis3dh = Lis3dh::new(i2c, 0x19).unwrap();
+    let mut lis3dh = Lis3dh::new(i2c, SlaveAddr::Alternate).unwrap();
+    lis3dh.set_mode(lis3dh::Mode::HighResolution).unwrap();
     lis3dh.set_range(lis3dh::Range::G2).unwrap();
     lis3dh.set_datarate(lis3dh::DataRate::Hz_100).unwrap();
 
@@ -62,7 +63,7 @@ fn main() -> ! {
 
     let mut j: u8 = 0;
     loop {
-        let lis = lis3dh.acceleration().unwrap();
+        let lis = lis3dh.accel_raw().unwrap();
 
         //what about like.. momentum, more angle or longer its been at angle stops slower
         //like.. steps larger so it gets easier. also on a bigger number tilt?
