@@ -15,7 +15,7 @@ use hal::prelude::*;
 use hal::time::KiloHertz;
 use hal::timer::SpinTimer;
 use hal::{clock::GenericClockController, delay::Delay};
-use lis3dh::{accelerometer::Accelerometer, Lis3dh};
+use lis3dh::{accelerometer::RawAccelerometer, Lis3dh, SlaveAddr};
 use pac::{CorePeripherals, Peripherals};
 use smart_leds::hsv::{hsv2rgb, Hsv, RGB8};
 use smart_leds::SmartLedsWrite;
@@ -49,14 +49,15 @@ fn main() -> ! {
         &mut pins.port,
     );
 
-    let mut lis3dh = Lis3dh::new(i2c, 0x19).unwrap();
+    let mut lis3dh = Lis3dh::new(i2c, SlaveAddr::Alternate).unwrap();
+    lis3dh.set_mode(lis3dh::Mode::HighResolution).unwrap();
     lis3dh.set_range(lis3dh::Range::G2).unwrap();
     lis3dh.set_datarate(lis3dh::DataRate::Hz_100).unwrap();
 
     let mut state = TiltState::new();
 
     loop {
-        let lis = lis3dh.acceleration().unwrap();
+        let lis = lis3dh.accel_raw().unwrap();
 
         let (pos, j) = state.update(lis.x);
 

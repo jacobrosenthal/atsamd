@@ -13,3 +13,7 @@ rustflags = [
 
    "-C", "link-arg=-Tlink.x",
 ]
+
+# build.rs dependencies fix #5730
+[unstable]
+features = ["host_dep"]
