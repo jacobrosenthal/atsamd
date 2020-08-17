@@ -44,7 +44,7 @@ panic-halt = "~0.2"
 embedded-graphics = "0.6.0"
 smart-leds = "0.3"
 ws2812-spi = "0.2.0"
-lis3dh = "0.1.0"
+lis3dh = { git = "git://github.com/jacobrosenthal/lis3dh-rs", rev = "full_g" }
 cortex-m-rtic = "~0.5.1"
 
 [dependencies.usb-device]

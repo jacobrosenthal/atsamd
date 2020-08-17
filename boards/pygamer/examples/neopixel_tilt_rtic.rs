@@ -13,80 +13,104 @@
 // use panic_halt;
 use pygamer as hal;
 
-use hal::clock::GenericClockController;
-use hal::delay::Delay;
-use hal::entry;
-use hal::pac::{CorePeripherals, Peripherals};
+use cortex_m::peripheral::DWT;
+use embedded_hal::{digital::v1_compat::OldOutputPin, timer::CountDown};
+use hal::gpio;
 use hal::prelude::*;
+use hal::sercom::{I2CMaster2, Sercom2Pad0, Sercom2Pad1};
 use hal::time::KiloHertz;
-use hal::timer::SpinTimer;
+use hal::{clock::GenericClockController, timer::TimerCounter};
+use lis3dh::{accelerometer::Accelerometer, Lis3dh, SlaveAddr};
 use smart_leds::{
     hsv::{hsv2rgb, Hsv, RGB8},
     SmartLedsWrite,
 };
+use ws2812_timer_delay as ws2812;
 
-use lis3dh::{accelerometer::Accelerometer, Lis3dh, SlaveAddr};
+#[rtic::app(device = crate::hal::pac, peripherals = true)]
+const APP: () = {
+    struct Resources {
+        neopixel: NeopixelType,
+        lis3dh: Lis3dhType,
 
-#[entry]
-fn main() -> ! {
-    let mut peripherals = Peripherals::take().unwrap();
-    let _core_peripherals = CorePeripherals::take().unwrap();
-
-    let mut clocks = GenericClockController::with_internal_32kosc(
-        peripherals.GCLK,
-        &mut peripherals.MCLK,
-        &mut peripherals.OSC32KCTRL,
-        &mut peripherals.OSCCTRL,
-        &mut peripherals.NVMCTRL,
-    );
-
-    let mut pins = hal::Pins::new(peripherals.PORT).split();
-
-    // neopixels
-    let timer = SpinTimer::new(4);
-    let mut neopixel = pins.neopixel.init(timer, &mut pins.port);
-
-    let mut delay = Delay::new(_core_peripherals.SYST, &mut clocks);
-    delay.delay_ms(255u8);
-
-    // i2c
-    let i2c = pins.i2c.init(
-        &mut clocks,
-        KiloHertz(400),
-        peripherals.SERCOM2,
-        &mut peripherals.MCLK,
-        &mut pins.port,
-    );
-
-    let mut lis3dh = Lis3dh::new(i2c, SlaveAddr::Alternate).unwrap();
-
-    lis3dh.set_range(lis3dh::Range::G2).unwrap();
-
-    // we update neopixels based on this so cant be too fast
-    lis3dh.set_datarate(lis3dh::DataRate::Hz_10).unwrap();
-
-    let mut state = TiltState::new(2.0, 2);
-
-    loop {
-        while !lis3dh.is_data_ready().unwrap() {}
-        let dat = lis3dh.accel_norm().unwrap();
-
-        let (pos, j) = state.update(dat.x);
-
-        // iterate through neopixels and paint the one led
-        let _ = neopixel.write((0..5).map(|i| {
-            if i == pos {
-                hsv2rgb(Hsv {
-                    hue: j,
-                    sat: 255,
-                    val: 32,
-                })
-            } else {
-                RGB8::default()
-            }
-        }));
+        #[init(TiltState::new(2.0, 2))]
+        state: TiltState,
     }
-}
+
+    #[init]
+    fn init(mut c: init::Context) -> init::LateResources {
+        let mut peripherals = c.device;
+        let mut clocks = GenericClockController::with_internal_32kosc(
+            peripherals.GCLK,
+            &mut peripherals.MCLK,
+            &mut peripherals.OSC32KCTRL,
+            &mut peripherals.OSCCTRL,
+            &mut peripherals.NVMCTRL,
+        );
+
+        let mut pins = hal::Pins::new(peripherals.PORT).split();
+
+        let gclk0 = clocks.gclk0();
+        let timer_clock = clocks.tc2_tc3(&gclk0).unwrap();
+        let mut timer = TimerCounter::tc3_(&timer_clock, peripherals.TC3, &mut peripherals.MCLK);
+        timer.start(3_000_000u32.hz());
+
+        let neopixel = pins.neopixel.init(timer, &mut pins.port);
+
+        // Initialize (enable) the monotonic timer (CYCCNT)
+        c.core.DCB.enable_trace();
+        // required on Cortex-M7 devices that software lock the DWT (e.g. STM32F7)
+        DWT::unlock();
+        c.core.DWT.enable_cycle_counter();
+
+        let i2c = pins.i2c.init(
+            &mut clocks,
+            KiloHertz(400),
+            peripherals.SERCOM2,
+            &mut peripherals.MCLK,
+            &mut pins.port,
+        );
+
+        let mut lis3dh = Lis3dh::new(i2c, SlaveAddr::Alternate).unwrap();
+        lis3dh.set_range(lis3dh::Range::G2).unwrap();
+
+        // we update neopixels based on this so cant be too fast
+        lis3dh.set_datarate(lis3dh::DataRate::Hz_10).unwrap();
+
+        init::LateResources { neopixel, lis3dh }
+    }
+
+    //neopixels are blocking so we need to run them at a low priority. Were not doing an power saving in idle,z
+    #[idle(resources = [neopixel, lis3dh, state])]
+    fn main(c: main::Context) -> ! {
+        loop {
+            while !c.resources.lis3dh.is_data_ready().unwrap() {}
+            let dat = c.resources.lis3dh.accel_norm().unwrap();
+
+            let (pos, j) = c.resources.state.update(dat.x);
+
+            // iterate through neopixels and paint the one led
+            let _ = c.resources.neopixel.write((0..5).map(|i| {
+                if i == pos {
+                    hsv2rgb(Hsv {
+                        hue: j,
+                        sat: 255,
+                        val: 32,
+                    })
+                } else {
+                    RGB8::default()
+                }
+            }));
+        }
+    }
+
+    // RTIC requires that unused interrupts are declared in an extern block when
+    // using software tasks; these free interrupts will be used to dispatch the
+    // software tasks.
+    extern "C" {
+        fn SDHC0();
+    }
+};
 
 pub struct TiltState {
     /// define a band for which -deadzone to +deadzone is considered level
@@ -146,6 +170,14 @@ impl TiltState {
         (self.pos, self.j)
     }
 }
+
+type NeopixelType = ws2812::Ws2812<
+    hal::timer::TimerCounter3,
+    OldOutputPin<gpio::Pa15<gpio::Output<gpio::PushPull>>>,
+>;
+
+type Lis3dhType =
+    Lis3dh<I2CMaster2<Sercom2Pad0<gpio::Pa12<gpio::PfC>>, Sercom2Pad1<gpio::Pa13<gpio::PfC>>>>;
 
 #[inline(never)]
 #[panic_handler]

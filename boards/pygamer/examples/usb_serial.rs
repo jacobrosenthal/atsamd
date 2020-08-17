@@ -1,6 +1,3 @@
-#![no_std]
-#![no_main]
-
 //! Makes the pygamer appear as a USB serial port. The color of the
 //! neopixel LED can be changed by sending bytes to the serial port.
 //!
@@ -14,7 +11,11 @@
 //! Note leds may appear white during debug. Either build for release or add
 //! opt-level = 2 to profile.dev in Cargo.toml
 
-use panic_halt as _;
+#![no_std]
+#![no_main]
+
+#[allow(unused_imports)]
+use panic_halt;
 use pygamer as hal;
 
 use cortex_m::interrupt::free as disable_interrupts;
