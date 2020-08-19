@@ -54,6 +54,7 @@ ws2812-spi = "0.2.0"
 lis3dh = { version = "0.2.0", git = "https://github.com/BenBergman/lis3dh-rs.git" }
 cortex-m-rtic = "~0.5.1"
 pygamer-panic-led = "0.1.0"
+ufmt = "0.1.0"
 
 [dependencies.usb-device]
 version = "~0.2"
