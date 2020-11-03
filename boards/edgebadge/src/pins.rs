@@ -1,10 +1,11 @@
 //! PyGamer pins
 
-use super::{hal, pac, pac::MCLK, target_device};
+use super::{hal, pac, pac::MCLK, pac::QSPI, target_device};
 
 use crate::hal::gpio::{self, *};
 use gpio::{Floating, Input, Output, Port, PushPull};
 use hal::define_pins;
+use hal::qspi;
 
 use hal::prelude::*;
 
@@ -579,6 +580,14 @@ pub struct QSPIFlash {
     pub data1: Pa9<Input<Floating>>,
     pub data2: Pa10<Input<Floating>>,
     pub data3: Pa11<Input<Floating>>,
+}
+
+impl QSPIFlash {
+    pub fn init(self, mclk: &mut MCLK, port: &mut Port, qspi: QSPI) -> qspi::Qspi {
+        qspi::Qspi::new(
+            mclk, port, qspi, self.sck, self.cs, self.data0, self.data1, self.data2, self.data3,
+        )
+    }
 }
 
 /// Button pins
