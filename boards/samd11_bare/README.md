@@ -43,14 +43,16 @@ $ cargo install probe-run
 Then simply use your ide's run or play button, or run:
 ```bash
 $ cargo run --release --example adc --features=unproven
-    Finished release [optimized + debuginfo] target(s) in 1.10s
-     Running `probe-run --chip ATSAMD11C14A target/thumbv6m-none-eabi/release/examples/adc`
-  (HOST) INFO  flashing program (35.17 KiB)
+    Finished release [optimized + debuginfo] target(s) in 0.99s
+     Running `probe-run --chip ATSAMD11C14A target\thumbv6m-none-eabi\release\examples\adc`
+  (HOST) INFO  flashing program (7.18 KiB)
   (HOST) INFO  success!
 ────────────────────────────────────────────────────────────────────────────────
-4129
-4074
-4177
+3828
+3829
+414
+413
+419
 ^Cstack backtrace:
    0: <atsamd_hal::common::delay::Delay as embedded_hal::blocking::delay::DelayUs<u32>>::delay_us
         at /home/atsamd/hal/src/common/delay.rs:72
